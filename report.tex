@@ -14,8 +14,50 @@
 
 \section{contexte du travail, probleme sur lequel travaille et etat de l'art}
 
+\subsection{weak memory models}
+
+Multiprocessors whether IBM Power or ARM have highly relaxed memory models, that is to say that they feature a number of hardware optimisations. These only impact the execution time of sequential code, however on concurrent code their impact becomes noticeable to the programmer in that code will behave in unexpected ways unless remedied by way of barriers and dependencies among others.
+
+\subsubsection{sequential consistency}
+
+Sequential consistency means that there is no local reordering : all instructions are executed by threads in the order specified by the program with each instruction completed before starting the next one and that the writes become visible to all threads at the same time. This is usually not the case for actual hardware implementations.
+
+\subsubsection{example : tso}
+
+In the TSO model, each thread has a FIFO write buffer to the shared memory where writes are stored, read events read from the latest write in their thread's write buffer or if there is no write to the relevant location in the write buffer, to the shared memory. This does not ensure sequential consistency even though writes become visible to all threads at the same time, if a thread writes to a location x and reads from a location y, in this case the thread can read the value of y before the new value of x reaches the shared memory.
+
+\subsubsection{actual memory models}
+
+Actual memory models like IBM Power or ARM will forego sequential consistency. This is due to a variety of factors such as efficiency, power saving, hardware complexity or historical choices. This means that on these architectures instructions can be executed out of order and speculatively(ie go down a branch before knowing whether or not you will), there is also no guarantee that a given write will become visible to all other threads at the same time.
+
+http://www.cl.cam.ac.uk/~pes20/ppc-supplemental/test7.pdf
+http://www.cl.cam.ac.uk/~pes20/weakmemory/
+
+\subsubsection{diagrams}
+
+
+\subsection{c11/rc11}
+
+\subsection{herd}
+
+\subsubsection{herdtools7}
+
+\subsubsection{how it works at the moment}
+
 \section{solution (partielle) proposée, mise en perspective avec l'etat de l'art}
 
+\subsection{implementation rc11 en cat}
+
+\subsection{implementation stateless dans herd}
+
+\subsubsection{interet de l'algo stateless}
+
+\subsubsection{differences entre stateless theorique et implementation}
+
 \section{problemes laissés ouverts/points de continuation}
+
+\subsection{travail a faire pour stateless dans herd}
+
+\subsection{smt solvers for memory model checking}
 
 \end{document}
