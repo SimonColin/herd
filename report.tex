@@ -1,6 +1,34 @@
-\documentclass[a4]{article}
+\documentclass[a4,12pt]{article}
 
 \usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{listings}
+\lstset{xleftmargin=3em}
+\lstset{
+  mathescape=true,
+  language=[Objective]{Caml},
+  basicstyle=\ttfamily,
+  extendedchars=true,
+  showstringspaces=false,
+  aboveskip=\smallskipamount,
+  % belowskip=\smallskipamount,
+  columns=fullflexible,
+  moredelim=**[is][\color{blue}]{/*}{*/},
+  moredelim=**[is][\color{green!60!black}]{/!}{!/},
+  moredelim=**[is][\bfseries]{/(}{)/},
+  moredelim=[is][\color{red}]{/[}{]/}
+}
+\usepackage[dvipsnames]{xcolor}
+
+
+\newcommand{\hb}{{\color{blue}hb}}
+\newcommand{\eco}{{\color{red}eco}}
+\newcommand{\rmw}{{\color{brown}rmw}}
+\newcommand{\rb}{{\color{red}rb}}
+\newcommand{\mo}{{\color{yellow}mo}}
+\newcommand{\psc}{{\color{Maroon}psc}}
+\newcommand{\po}{po}
+\newcommand{\rf}{{\color{green}rf}}
 
 \title{Research internship report}
 
@@ -12,34 +40,34 @@
 
 \maketitle
 
-\section{contexte du travail, probleme sur lequel travaille et etat de l'art}
+%\section{Memory models, rc11 and herd}
 
 \subsection{weak memory models}
 
-Multiprocessors whether IBM Power or ARM have highly relaxed memory models, that is to say that they feature a number of hardware optimisations. These only impact the execution time of sequential code, however on concurrent code their impact becomes noticeable to the programmer in that code will behave in unexpected ways unless remedied by way of barriers and dependencies among others. Knowing every specific optimisation that a given processor may perform is of little use since this can vary from processor to processor and manufacturers would rather not share this information, what matters is the general rules that dictate how these optimisations are visible to the programmer.
+Multiprocessors whether IBM Power or ARM have highly relaxed memory models, that is to say that they feature a number of hardware optimisations. These only impact the execution time of sequential code, however on concurrent code their impact becomes noticeable to the programmer in that code will behave in unexpected ways. Knowing every specific optimisation that a given processor may perform is of little use to a programmer since this can vary from processor to processor and manufacturers would rather not share this information, what does matter is the general rules that dictate how these optimisations become visible to the programmer outside of performance improvements.
 
 \subsubsection{sequential consistency}
 
-An example of such a rule is sequential consistency, sequential consistency means adherence to two criteria :
-- no local reordering : all instructions are executed by threads in the order specified by the program with each instruction completed before starting the next one
-- multiple copy atomicity : the writes become visible to all threads at the same time.
-Real life memory models are usually much more relaxed than this.
+An example a rule that dictates how the code may or may not behave is sequential consistency, sequential consistency means adherence to two criteria 
+\begin{itemize}
+\item no local reordering : all instructions are executed by threads in the order specified by the program with each instruction completed before starting the next one.
+\item multiple copy atomicity : the writes become visible to all threads at the same time.
+\end{itemize}
+This is quite strict and does not allow for a lot of optimisations, real life memory models are usually much more relaxed than this.
 
 \subsubsection{example : tso}
 
-In the TSO model, each thread has a FIFO write buffer to the shared memory where writes are stored, read events read from the latest write in their thread's write buffer or if there is no write to the relevant location in the write buffer, to the shared memory. This does not ensure sequential consistency since a write becomes visible to its thread before becoming visible to all other threads, what's more if a thread writes to a location x and reads from a location y, in this case the thread can read the value of y before the new value of x reaches the shared memory, this means that there is local reordering : all operations aren't executed in the program order.
+In the TSO model, each thread has a FIFO write buffer to the shared memory where writes are stored until they are written to the shared memory and attempts to read from memory read from the most recent write to the relevant location in their thread's write buffer or if there is none they read from the shared memory. This does not ensure sequential consistency since a write becomes visible to its thread before becoming visible to all other threads, what's more if a thread writes to a location x and reads from a location y, the thread can read the value of y before the new value of x reaches the shared memory, this means that there is local reordering as all operations aren't executed in the program order.
 
 \subsubsection{actual memory models}
 
-Actual memory models like IBM Power or ARM will forego sequential consistency. This is due to a variety of factors such as efficiency, power saving, hardware complexity or historical choices. This means that on these architectures instructions can be executed out of order and speculatively(ie go down a branch before knowing whether or not you will), there is also no guarantee that a given write will become visible to all other threads at the same time. This would mean that concurrent code would behave erratically on such machines, however this is not the case, the visible effects of the optimisations are known, which means that the programmer can use a number of tools and tricks to ensure the correct behavior of the program.
+Actual memory models like IBM Power or ARM will also forego sequential consistency. This is due to a variety of factors such as efficiency, power saving, hardware complexity and historical choices. This means that on these architectures instructions can be executed out of order and even speculatively(ie go down a branch before knowing whether or not you are supposed to, and undoing the changes should this not be the case), there is also no guarantee that a given write will become visible to all other threads at the same time. This would mean that concurrent code would behave unexpectedly on such machines, however this is not the case, the visible effects of the optimisations are known, which means that programmers can use a number of tools and tricks to ensure the correct behavior of their program.
 
 \subsubsection{litmus tests}
 
-Should the rules dictating optimisations not be known, they can be found out by running litmus tests, these are short parallel programs which feature a certain combination of instructions as well as some expected property of the results, these tests are run a large number of times on the processor in question, whether they always pass the test or fail it then teaches us some information on the ways in which optimisations become visible.
+Should the rules dictating optimisations not be known, they can be studied by running litmus tests, these are short parallel programs which feature a certain combination of instructions as well as some expected property of the results, these tests are run a large number of times on the processor in question, whether they always pass the test or fail it then teaches us some information on the ways in which optimisations become visible.
 
-One example of such a test is called message passing, this test simulates one thread writing a value and then unlocking a lock while another thread waits for said lock to be unlocked and then reads the value written by the first thread. If the memory model is SC then the second thread should always readthe value written by the first thread rather than any prior one. The pseudocode of this would look like this
-
-We assume all variables to be initialised at 0
+One example of such a test is called message passing, this test simulates one thread writing a value and then unlocking a lock while another thread waits for said lock to be unlocked and then reads the value written by the first thread. If the memory model is SC then the second thread should always read the value written by the first thread rather than any prior one. The pseudocode of this would look like this
 
 Thread 0
 x = 1;
@@ -51,61 +79,118 @@ while y = 0 {
 }
 r1 = x;
 
-If the processors model allows local reordering, it is possible for the thread 0 to write 1 in y before writing in x and thus we would have some executions where r1 = 0.
+We assume all variables to be initialised at 0
 
-To ensure the execution of all the instructions in the order in which they are in the program, the programmer has access to more or less strong fences that will restrict the ways in which instructions are reordered, as well as tricks such as data dependencies. A data dependency means that the location of the value read depends on the value of a variable, if this is the case the memory models will generally ensure that this value is written to before it is used to calculate the location of the value read. To make use of this a programmer would typically xor this value with itself and add the result, which will always be 0, to the location of the data to read.
+In this case, if the machine is sequentially consistent, we should always have r1 = 1. 
+If, however, the processors model allows local reordering, it is possible for the thread 0 to write 1 in y before writing in x and thus we would have some executions where r1 = 0.
 
-http://www.cl.cam.ac.uk/~pes20/ppc-supplemental/test7.pdf
-http://www.cl.cam.ac.uk/~pes20/weakmemory/
+To ensure the execution of all the instructions in the order in which they are in the program, the programmer has access to more or less strong fences that will restrict the ways in which code is optimised, as well as tricks such as data dependencies. A data dependency means that the location of the value read depends on the value of a variable, if this is the case the memory models will generally ensure that this value is written to before it is used to calculate a location. To make use of this a programmer would typically xor this value with itself and add the result, which will always be 0, to the location of the data to read.
 
-\subsubsection{diagrams}
+\subsubsection{executions}
 
-A given execution of a program can be viewed as a diagram where every node represents a memory event, that is to say a read or a write, we can then define a set of relations between these nodes, some which are derived from the program itself, such as the program order po which would be a set of total orders over the instructions of each thread, or same location loc which relates any pair of events accessing the same location, others are specific to a given executions choice of ordering of events, this is usually a choice of memory order mo : a set of total orders of writes to each memory location and read from rf which relates each read event to the write that it reads from. Whether a certain execution is possible on a given memory model is then decided by checking certain properties of these relations such as the acyclicity of a certain combination of them.
+In the context of memory models, it is common to view instructions as memory events, that is to say a read from or write to the shared memory. A given execution of a program can be viewed as a set of memory events, we can then define a set of relations between these events, some which are simply consequences of the program itself, such as the program order po which would be a set of total orders over the instructions of each thread that relates an event with all later event according to their order in the program, or the same location relation loc which relates any pair of events accessing the same memory location, others are specific to a given execution : we consider an execution to be a a set of choices made by the processor, usually this means a choice of memory order mo : a set of total orders of writes to each memory location and the read from relation rf which relates each read event to the unique write that it reads from. Whether a certain execution is possible on a given memory model is then decided by checking certain properties of these relations such as the acyclicity of a given combination of relations.
 
 \subsection{c11/rc11}
 
-An example of such a model is the rc11 standard, published in 2017 to fix a number of flaws in the earlier c11 standard.
+An example of such a model is the rc11 standard, created with the purpose of fixing a number of flaws in the earlier c11 standard. An execution is rc11 consistent if it satisfies four properties : coherence, atomicity, sequential consistency and no-thin-air. If coherence holds, then this means that programs with one shared memory location are sequentially consistent. Sequential consistency ensures that the instructions that should be sequentially consistent indeed are.
+
+\subsubsection{rmws and atomicity}
+
+Up to now the memory events discussed where either reads or writes, however there exists instructions known as Read-Modify-Write instructions which will read a location and write to it. rmws are supposed to be atomic, we should not observe any instructions executed between the read and the write. The atomicity constraint means just that, that there is no write to the location of a rmw between the write read from by the rmw and the write part of the rmw.
+
+\subsubsection{no-thin-air}
+
+Due to some optimisations, it is possible to witness so-called out of thin air reads where it is possible to read values that appear nowhere on the program. This is prevented by requiring the union of the program order and the read from relation to be acyclic.
+
+\subsubsection{data races}
+
+An execution is said to be racy if there is a data race between non atomic accesses in it, in this case, the behavior is said to be undefined. Two different memory events are conflicting if they both access the same memory location and at least one of them is a write. A race is a conflict between events not connected by the happens before relation which is computed from base relations and orders events that are perceived as happening in a specific order.
+
+\begin{itemize}
+\item $\hb ; \eco ^?$ is irreflexive. \hfill (coherence)
+\item $\rmw \cap (\rb ; \mo) = \emptyset$. \hfill (atomicity)
+\item $\psc$ is acyclic. \hfill (sequential-consistency)
+\item $\po \cup \rf$ is acyclic. \hfill (no-thin-air)
+\end{itemize}
+
+
+\begin{lstlisting}[breaklines=true]
+RC11
+
+include "cos.cat"
+
+let mo = co
+let sb = po
+
+let rb = (rf^-1; mo) \ id
+let eco = (rf | mo | rb)+
+let rs = [W]; (sb & loc)?; [W & (RLX | REL | ACQ_REL | ACQ | SC)]; (rf; rmw)*
+let sw = [(REL | ACQ_REL | SC)]; ([F]; sb)?; rs; rf; [R & (RLX | REL | ACQ | ACQ_REL | SC)]; (sb; [F])?; [(ACQ | ACQ_REL | SC)]
+let hb = (sb | sw)+
+
+let sbl = sb \ loc
+let scb = sb | sbl; hb; sbl | sb & loc | mo | rb | hb & loc
+let pscb = ([SC] | [F & SC]; hb?); scb; ([SC] | hb? ; [F & SC])
+let pscf = [F & SC]; (hb | hb; eco; hb); [F & SC]
+let psc = pscb | pscf
+
+let cnf = ((W * _) | (_ * W)) & loc \ ((IW * _) | (_ * IW))
+let dr = (cnf & ext) \ (hb | hb^-1 | A * A)
+
+undefined_unless empty dr as Dr
+
+irreflexive (hb; eco?) as coherence
+empty (rmw & (rb; mo)) as atomicity
+acyclic psc as SC
+acyclic (sb | rf) as no-thin-air
+
+show hb, eco, psc, rmw
+\end{lstlisting}
+{\footnotesize{The RC11 rules as well as their translation into cat}}
 
 \subsection{herd}
 
 \subsubsection{herdtools7}
 
-Herd7 is part of the herdtools suite, which is made up of litmus7 which allows the user to generate litmus tests in a given language and featuring a combination of memory events specified by the user. These tests can be run with diy7. Herd7 takes as input a litmus test as well as a memory model specified by a .cat file. A cat file uses syntax similar to that of OCaml to combine relations and specify proprties that should hold. Herd7 then checks whether the properties of the litmus test hold in the given memory model.
+Herd7 is part of the herdtools suite, which is made up of litmus7 which allows the user to generate litmus tests in a given language and featuring a combination of memory events specified by the user. These tests can be run on a computer with diy7. Herd7 proper takes as input a litmus test as well as a memory model specified by a .cat file. A cat file uses syntax similar to that of OCaml to combine relations and specify proprties that should hold. Herd7 then checks whether the properties of the litmus test hold in the given memory model.
 
 \subsubsection{how it works at the moment}
 
-Herd takes the cat file and the litmus test and translates them into a set of diagrams each representing a choice of branches as well as a set of constraints. This is because at this point, the locations read are variables which will be resolved later, the constraints merely ensure that the values are such that the branches and values agree. For each such pair of diagrams and constraints, herd then generates every possible choice of mo and rf then checks if they are accepted by the model from the cat file, if they aren't, they are discarded, if they are then they are added to the result. Once all possibilities have been checked, herd provides the user with a list of possible final states in his cat model, as well as the amount of executions that passed and failed the litmus test.
+Herd takes the cat file and the litmus test and translates them into a set of executions each representing a choice of branches as well as a set of constraints. This is because at this point, the locations and values read and written are variables which will be resolved later, the constraints merely ensure that the values are such that the branches and values agree. For each such pair of executions and constraints, herd then generates every possible choice of mo and rf then checks if they are accepted by the model from the cat file, if they aren't, they are discarded, if they are they are added to the result. Once all possibilities have been checked, herd provides the user with a list of possible final states in his cat model, as well as the amount of executions that passed and failed the litmus test and can display the diagrams of the executions consistent with the model.
 
-\section{solution (partielle) proposée, mise en perspective avec l'etat de l'art}
+%\section{solution (partielle) proposée, mise en perspective avec l'etat de l'art}
 
-Generating all possible orders is not particularly efficient, on top of this, herd only performs one optimisation should the user specify a filter on the results, these will be discarded before being checked against the cat model, this means that cat is only really useable on fairly small litmus tests and cannot be used to verify real world application. Traditionally the complexity of model checking for memory models comes from the fact that we have to compute and store a large set of executions which costs a lot of memory or generate them on the fly which incurs the risk of generating the same executions several times. However ... recently came up with a stateless algorithm for rc11 model checking that guarantees that it will check any execution only once up to reordering of equivalent sets, as long as it does not feature any rmws, but still performs quite well with rmws. I was tasked with implementing this algorithm in herd as a way to expand its possible uses.
+Generating all possible orders is not particularly efficient, on top of this, herd only performs one optimisation : should the user specify a filter on the results, these will be discarded before being checked against the cat model, this means that cat is only really useable on fairly small litmus tests and cannot be used to verify real world application. Traditionally the complexity of model checking for memory models comes from the fact that it is necessary to compute and store a large set of executions which costs a lot of memory or generate them on the fly which incurs the risk of generating the same executions several times. However Michalis Kokologiannakis, Ori Lahav, Konstantinos Sagonas, and Viktor Vafeiadis recently came up with a stateless algorithm for rc11 model checking that guarantees that it will check any execution only once up to reordering of equivalent sets, as long as the program to check does not feature any rmws, even if the program features rmws, the performance of the algorithm is still quite good. I was tasked with implementing this algorithm in herd as a way to expand its possible uses.
+
+\subsubsection{interet et fonctionement de l'algo stateless}
+
+The stateless algorithm is quite efficient, however this is due to its specificity, it only works for rc11 models. What allows the algorithm to avoid generating a number of non rc11 execution is that of the properties that rc11 requires all but completeness and sequential consistency are monotonous, if they hold for a given set of events they also hold for any subset of it. This means that we can avoid non rc11 consistent executions by construction. Completeness is ensured once all the events have been added and sequential consistency is simply checked when a complete execution has been generated. The algorithm also relies on having an order in which events are to be added to a given partial execution. Since we proceed by construction, we need a way to have reads read from writes added at a later point in time, to this end, we rely on a set of revisitable writes.
+Roughly speaking the stateless algorithm works recursively by adding the next event to the partial execution at hand, and generating all the possible executions that can include the events and relations from the prior partial execution. If the event added is a read, the algorithm generates an execution for every write that it can read from according to rc11. If the event added is a write, then the algorithm generates an execution for every possible position the write can be placed in the modification order and then the reads are revisited. The revisiting of the reads for a write w generates an execution for every subset of the revisit set that satisfies certain properties, such as that it cannot reach itself by way of sbrf, and makes these reads read from the write w, the sbrf successors of these reads are then removed from the partial execution.
 
 \subsection{implementation rc11 en cat}
 
-As an introduction to memory models, I implemented rc11 in cat which was not the case yet, this was quite straightforward as it merely boiled down to translating formulas into cat and the better part of my time was spent understanding rc11 and memory models.
+As an introduction to memory models, I implemented rc11 in cat which had not been done yet, this was quite straightforward as it merely boiled down to translating formulas into cat and the better part of my time was spent understanding memory models in general as well as the rc11 model in particular.
 
 \subsubsection{implementation rc11 dans herd}
 
-To get familiar with herd, I then implemented an rc11 check directly into herd as it would otherwise have been generated from a cat file. This allowed me to get familiar with how herd was put together and better understand its inner workings, as well as how to work on a large project with many modules spread out over different files.
+To get familiar with the quite large codebase of herd, I then implemented an rc11 check directly into herd as it would otherwise have been generated from a cat file. This allowed me to get familiar with how herd was put together and better understand its inner workings, as well as more generally how to work on a large project with many modules spread out over different files.
 
 \subsection{implementation stateless dans herd}
 
-Once this was done I got started implementing the stateless algorithm into herd. The stateless algorithm starts with only the initial writes and then adds events in a specific order, I did this by defining a type that stored a set of added events, as well as events to add such that they can be added in a consistent order, relations, the revisit set and some debug information.
-
-\subsubsection{interet de l'algo stateless}
+Once I had become familiar enough with both memory models and herd, I started implementing the stateless algorithm into herd. The stateless algorithm starts with only the initial writes and then adds events in a specific order, I did this by defining a type that stored a set of added events, as well as events to add such that they can be added in a consistent order, relations, the revisit set and some debug information.
 
 \subsubsection{differences entre stateless theorique et implementation}
 
-As stated before, herd makes a choice of branches before calculating executions, since rewriting herd to not do this would have taken quite a bit of time and involved parts of the program that I was not at all familiar with, my current implementation works on each choice of branches, this means that up to any given branching path, it will generate the same set of pre-executions for every choice. This can be quite bad for performance in theory. Another difference is that rmw events in the current implementation of herd are a single event, but the algorithm requires them to be a read and a write, this variant was already partially implemented but had to be completed.
+As stated before, herd makes a choice of branches before calculating executions, since rewriting herd to not do this would have taken quite a bit of time and involved parts of the program that I was not at all familiar with, my current implementation works on each choice of branches, this means that up to any given branching path, it will generate the same set of pre-executions for every choice. This can be quite bad for performance in theory. Another difference is that rmw events in the current implementation of herd are a single events, but the algorithm requires them to be a read and a write, this variant was already partially implemented but had to be completed.
 
-\section{problemes laissés ouverts/points de continuation}
+%\section{problemes laissés ouverts/points de continuation}
 
 \subsection{travail a faire pour stateless dans herd}
 
-In its current state, the stateless algorithm gives the same results as the cat file, albeit more slowly, for programs without rmws, but it has yet to be optimised. As far as programs with rmws are concerned, some bugs still persist, however I am confident that this will not last long.
+In its current state, the stateless algorithm gives the same results as the cat file, albeit more slowly, for programs without rmws, but it has yet to be optimised. As far as programs with rmws are concerned, some bugs still persist where the results obtained with the rc11 cat file and the stateless algorithm differ, however I am confident that this will not last long.
 
 \subsection{smt solvers for memory model checking}
 
-We recently had a talk with Hernan Ponce de Leon who did some work on using smt solvers to perform memory model checking, it would be of interest to enrich herd with this algorithm as well and would be a possible continuation once the stateless algorithm works and has been optimized.
+We recently had a talk with Hernan Ponce de Leon who did some work on using the advances made in the field of smt solvers to perform memory model checking, it would be of interest to enrich herd with this algorithm as well and this would be a possible continuation once the stateless algorithm works and has been optimized.
 
 \end{document}
