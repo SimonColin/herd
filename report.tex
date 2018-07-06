@@ -22,6 +22,7 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
+\usepackage{wrapfig,lipsum}
 
 
 \newcommand{\hb}{\texttt{\color{blue}hb}}
@@ -204,6 +205,8 @@ S2:=1
 S3:=1
 S3:=S1==0
 \end{lstlisting}
+
+\begin{minipage}{\textwidth}
 \item the case where $x \neq 0$ : \begin{lstlisting}
 Events
 a: Write(x, 0)
@@ -213,6 +216,7 @@ S1:=x
 S2:=true
 S2:=S1==0
 \end{lstlisting}
+\end{minipage}
 \end{itemize}
 {\footnotesize{Some liberties were taken with the shape of the constraints compared to the actual constraints in herd. This was done for ease of understanding.}}
 
@@ -222,14 +226,13 @@ S2:=false
 S2:=0==0
 \end{lstlisting}
 
+\begin{wrapfigure}{r}{4.5cm}
+\includegraphics[width=4.5cm]{screen}
+\caption{{\footnotesize{A diagram generated from the only possible execution of the previous example}}}
+\end{wrapfigure}
 
  For each such pair of executions and constraints, herd then generates every possible choice of $\mo$ and $\rf$ then checks if they are accepted by the model from the .cat file, if they aren't, they are discarded, if they are accepted they are added to the result. Once all possibilities have been checked, herd provides the user with a list of possible final states in his .cat model, as well as the amount of executions that passed and failed the litmus test and can display the diagrams of the executions consistent with the model.
- 
-\begin{figure}[h]
-\centering
-\includegraphics[scale=0.25]{screen}
-\caption{A diagram generated from the only possible execution of the previous example}
-\end{figure}
+
 
 %SHOW DIAGRAM
 
