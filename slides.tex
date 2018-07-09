@@ -42,42 +42,56 @@
 
 \begin{frame}{Weak memory models}
 
-	IBM Power and ARM mutliprocessors have highly relaxed memory models
+	IBM Power and ARM mutliprocessors have highly relaxed memory models.
 	\vfill
-	Relaxed memory models mean unexpected behaviors appear on concurrent programs	
+	Relaxed memory models mean unexpected behaviors appear on concurrent programs.
 	\vfill
-	Interested in what behaviors are allowed
+	Interested in what behaviors are allowed.
 	
 \end{frame}
 
 \begin{frame}{Memory events}
 
-	Programs are made of instructions
+	Programs are made of instructions.
+	\vfill %%%EXAMPLES
+	Instructions involve memory events : reads from and writes to the shared memory.
 	\vfill
-	Instructions involve memory events : reads from and writes to the shared memory
-	\vfill
-	We study these memory events
+	We study these memory events.
 
 \end{frame}
 
-\begin{frame}{weak memory models}
+\begin{frame}{Weaker memory models}
 
 	\vfill
 	\vfill
-	Weak memory models allow a number of behaviors\begin{itemize}
+	Weaker memory models allow more behaviors :\begin{itemize}
 	\item out of order execution
 	\item speculative execution
 	\item writes don't become visible to every thread at the same time
 	\end{itemize}
 	\vfill
-	Fortunately, there are means to restore ordering
+	Fortunately, there are means to restore ordering.
 	\vfill
+
+\end{frame}
+
+\begin{frame}{Restoring ordering}
+
+	Fences : instructions that ensure events before the fence occur before those after the fence.
+	\vfill
+	Data dependencies : when an instruction A uses the value of an instruction B for some calculation.
+	\vfill
+	In such a situation processors will ensure B occurs before A.
 
 \end{frame}
 
 \begin{frame}[fragile]{litmus tests}
 
-	A litmus test is a short parallel program and an assertion about the result
+	\vfill
+	\vfill
+	A litmus test is a short parallel program and an assertion about the result.
+	\begin{figure}
+	\centering
 	\begin{tabular}{p{4cm} p{4cm}}
 	\begin{verbatim}
 	Thread 0
@@ -90,14 +104,19 @@
 	r1 = x;
 	\end{verbatim}
 	\end{tabular}
+	\centerline{Always $r1 = 1$}
+	\caption{The message passing litmus test}
+	\end{figure}
 	\vfill
-	We use them to find out about the possible behaviours of machines
+	We use them to find out about the possible behaviours of machines.
+	\vfill
+	\vfill
 
 \end{frame}
 
 \begin{frame}
 
-	Executions are a set of events and relations
+	Executions are a set of events and relations.
 	\begin{figure}[b]
 	\centering
 	\includegraphics[width=4.5cm]{exec}
@@ -105,14 +124,28 @@
 
 \end{frame}
 
-\begin{frame}{RC11}
+\begin{frame}{RC11 : events}
+
+	\begin{itemize}
+	\item fences
+	\item non atomic memory events
+	\item atomic memory events annotated with a memory order
+	\end{itemize}
+	\vfill
+	data race: when two events that aren't both atomic or both reads can access the same location at the same time.
+	\vfill
+	Data races cause unspecified behaviour.
+
+\end{frame}
+
+\begin{frame}{RC11 : properties}
 
 	\vfill
 	\begin{itemize}
 	\item $\hb ; \eco ^?$ is irreflexive. \hfill (coherence)
 	\item $\rmw \cap (\rb ; \mo) = \emptyset$. \hfill (atomicity)
-	\item $\psc$ is acyclic. \hfill (sequential-consistency)
 	\item $\po \cup \rf$ is acyclic. \hfill (no-thin-air)
+	\item $\psc$ is acyclic. \hfill (sequential-consistency)
 	\end{itemize}
 	\vfill
 
@@ -147,11 +180,11 @@
 
 \begin{frame}
 
-	Generates every combination of $\rf$ and $\po$, this is computationally expensive
+	Generates every combination of $\rf$ and $\mo$, this is computationally expensive.
 	
-	Dealing with large sets of executions is a common problem for model checkers
+	Dealing with large sets of executions is a common problem for model checkers.
 	
-	Solution : a stateless algorithm that avoids this
+	Solution : a stateless algorithm that avoids this.
 
 \end{frame}
 
@@ -188,6 +221,25 @@
 	\end{tikzpicture}	
 	
 	\end{figure}	 
+
+\end{frame}
+
+\begin{frame}{Differences between the reference and my implementation}
+
+	
+
+\end{frame}
+
+\begin{frame}{My work}
+
+	So far, I have :
+	\begin{itemize}
+		\item implemented RC11 in CAT.
+		\item implemented the RC11 check directly into herd.
+		\item started but not quite finished implementing the stateless algorithm in herd.
+	\end{itemize}
+	\vfill
+	Should time allow it, I will try implementing smt based rc11 model checking techniques as well.
 
 \end{frame}
 
