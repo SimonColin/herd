@@ -2,6 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[dvipsnames]{xcolor}
+
 \usepackage{lib}
 
 \title{Research internship report}
@@ -9,6 +10,7 @@
 \author{Simon Colin}
 
 \date{\today}
+
 
 \begin{document}
 
@@ -67,35 +69,33 @@ r1 = x;
 
 In this case, if the machine is sequentially consistent, we should always have $r1 = 1$. If, however, the processors model allows local reordering, it is possible for the thread 0 to write 1 in $y$ before writing anything in $x$. In this case we would have some executions where $r1 = 0$.
 
-To ensure the execution of all the instructions in the order in which they are in the program, the programmer has access to more or less strong fences. Fences restore ordering by guaranteeing that the events before the fence take place before those after. Another way in which order is restored is dependencies. A data dependency means that the result of some calculation B depends on an earlier event A. In such cases memory models will guarantee that A takes place before B.% the location of the value read depends on the value of a variable, if this is the case the memory models will generally ensure that this value is written to before it is used to calculate a location. To make use of this a programmer would typically xor this value with itself and add the result, which will always be 0, to the location of the data to read.
+To ensure the execution of all the instructions in the order in which they are in the program, the programmer has access to more or less strong fence instructions. Fences restore ordering by guaranteeing that the events before the fence take place before those after. Another way in which order is restored is dependencies. A data dependency means that the result of some calculation B depends on an earlier event A. In such cases modern memory models will guarantee that A takes place before B.% the location of the value read depends on the value of a variable, if this is the case the memory models will generally ensure that this value is written to before it is used to calculate a location. To make use of this a programmer would typically xor this value with itself and add the result, which will always be 0, to the location of the data to read.
 
 \subsection{Executions}
 
-A given execution of a program can be viewed as a set of memory events, we can then define a set of relations between these events. Some which are simply consequences of the program itself, and others respresenting a choice made in this execution. The most important relation that is a consequence of the program is the program order $\po$ (sometimes called $sb$ for sequence before). $\po$ relates an event with all later events according to their order in the program. This means that $\po$ is a set of total orders over the instructions of each thread. We consider an execution to be a a set of choices made by the processor, usually this means a choice of memory order $\mo$ (sometimes called $co$) and of read from $\rf$. $\mo$ orders the writes to any given memory location. This means that it is a set of total orders on the sets of writes to the same location. $\rf$ relates each read event to the unique write that it reads from. Whether a certain execution is possible on a given memory model is then decided by checking certain properties of these relations. One such property could be the acyclicity of a given combination of relations for example.
+A given execution of a program can be viewed as a set of memory events, we can then define a set of relations between these events. Some which are simply consequences of the program itself, and others respresenting a choice made in this execution. The most important relation that is a consequence of the program is the program order $\po$ (sometimes called $sb$ for sequence before). The $\po$ relation relates an event with all later events according to their order in the program. This means that $\po$ is a set of total orders over the events of each thread. We consider an execution to be a a set of choices made by the processor, usually this means a choice of two relations : memory order $\mo$ (sometimes called $co$) and of read from $\rf$. The $\mo$ relation orders the writes to any given memory location. This means that it is the union of total orders on the sets of writes to the same location. $\rf$ relates each read event to the unique write that it reads from. Whether a certain execution is possible on a given memory model is then decided by checking certain properties of these relations. Typically this means the acyclicity of a given combination of relations for example.
 
 \vfill
 
 \section{C11/RC11}
 
-An example of such a model is the rc11 standard, created with the purpose of fixing a number of flaws in the earlier c11 standard. An execution is rc11 consistent if it satisfies four properties : coherence, atomicity, sequential consistency and no-thin-air. 
+The model that I worked on is the rc11\cite{rc11} standard, created with the purpose of fixing a number of flaws in the earlier c11 standard. Hence the name Repaired C11. An execution is rc11 consistent if it satisfies four properties : coherence, atomicity, no-thin-air and sequential consistency. The rc11 standard has both atomic and non atomic memory events, as well as fences. Atomic memory events also have a \emph{memory order} that defines how they may be reordered. The memory order can be \emph{relaxed}, \emph{aquire}, \emph{release} or \emph{sequentially consistent}.
 
-\subsection{Coherence and sequential consistency}
+\subsection{Coherence}
 
-If coherence holds, then programs with only one shared memory location are sequentially consistent. Sequential consistency ensures that the instructions that should be sequentially consistent indeed are.
+Coherence means that if we restrict the program to any single memory location, it is sequentially consistent. This does not however guarantee that the whole program is actually sequentially consistent.
 
 \subsection{RMW operations and atomicity}
 
-Up to now the memory events discussed where either reads or writes, however there exists instructions known as Read-Modify-Write instructions which will read a location and write to it. RMW operations are supposed to be atomic : we should not observe any instructions executed between the read and the write. The atomicity constraint means that if an RMW $r$ reads from a write $a$ there is no write $b$ that is $\mo$ after $a$ but $\mo$ before the write part of $r$.
+Up to now the instructions discussed where either loads or stores, however there exists instructions known as Read-Modify-Write instructions which will read a location and write to it. RMW operations are supposed to be atomic in the following sense : no write to $x$ can ever take place between the read and the write of a RMW on $x$. The atomicity constraint means that if an RMW $r$ reads from a write $a$ there is no write $b$ that is $\mo$ after $a$ but $\mo$ before the write part of $r$.
 
 \subsection{No-thin-air}
 
-Due to some optimisations, c11 allowed so-called out of thin air reads where we read values that appear nowhere on the program. RC11 prevents this by requiring the union of the program order and the read from relation to be acyclic.
+For the sake of making legal some compiler optimisations, c11 allowed so-called out of thin air reads where we read values that appear nowhere on the program. RC11 prevents this by requiring the union of the program order and the read from relation to be acyclic.
 
+\subsection{Sequential consistency}
 
-\subsection{Data races}
-
-An execution is said to be $racy$ if there is a $data race$ between non atomic accesses in it. In that case, the behavior is said to be undefined. Two different memory events are $conflicting$ if they both access the same memory location and at least one of them is a write. A $data race$ is a conflict between events not connected by the happens before relation. Happens before $\hb$ is computed from base relations and orders events that are perceived as happening in a specific order.
-The previously given example of message passing has a data race : the first thread writes to y and the second thread reads from y. Whether the execution is racy or not depends on whether either of these memory events is non atomic.
+The sequential consistency property ensures that atomic events of sequentially consistent memory order are indeed totally ordered. This is done using the $\psc$ for partial-SC relation. The $\psc$ relation contains the base relations $\po$, $\mo$ and $\rf$, as well as some derived relations over sequentially consistent atomic events.
 
 \begin{itemize}
 \item $\hb ; \eco ^?$ is irreflexive. \hfill (coherence)
@@ -103,8 +103,7 @@ The previously given example of message passing has a data race : the first thre
 \item $\psc$ is acyclic. \hfill (sequential-consistency)
 \item $\po \cup \rf$ is acyclic. \hfill (no-thin-air)
 \end{itemize}
-
-
+{\footnotesize{See figure 1 for an implementation of these rules in cat.}}
 \begin{figure}
 \centering
 \begin{lstlisting}
@@ -133,20 +132,25 @@ undefined_unless empty dr as Dr
 
 irreflexive (hb; eco?) as coherence
 empty (rmw & (rb; mo)) as atomicity
-acyclic psc as SC
 acyclic (sb | rf) as no-thin-air
+acyclic psc as SC
 
 show hb, eco, psc, rmw
 \end{lstlisting}
-\caption{The RC11 rules in cat.}
+\caption{My implementation of the RC11 rules in cat.}
 \label{fig:rc11-cat-code}
 \end{figure}
-\vfill
+
+\subsection{Data races}
+
+An execution is said to be $racy$ if there is a $data race$ between non atomic accesses in it. In that case, the behavior is said to be undefined. Two different memory events are $conflicting$ if they both access the same memory location and at least one of them is a write. A $data race$ is a conflict between events not connected by the happens before relation. Happens before $\hb$ is computed from base relations and orders events that are perceived as happening in a specific order.
+The previously given example of message passing has a data race : the first thread writes to y and the second thread reads from y. Whether the execution is racy or not depends on whether either of these memory events is non atomic.
+
 \section{Herd}
 
 \subsection{Herdtools7}
 
-Herd7 is part of the herdtools suite, which is made up of litmus7 which allows the user to generate litmus tests in a given language and featuring a combination of memory events specified by the user. These tests can be run on a computer with diy7. Herd7 proper takes as input a litmus test as well as a memory model specified by a .cat file. A .cat file uses syntax similar to that of OCaml to combine relations and specify proprties that should hold. Herd7 then checks whether the properties of the litmus test hold in the given memory model.
+Herd7 is part of the herdtools suite, which is made up of diy7 which allows the user to generate litmus tests in a given language and featuring a combination of memory events specified by the user. These tests can be run on a computer with litmus7. Herd7 proper takes as input a litmus test as well as a memory model specified by a .cat file. A .cat file uses syntax similar to that of OCaml to combine relations and specify proprties that should hold. Herd7 then simulates the test above the model.
 
 \subsection{How it works at the moment}
 
@@ -162,7 +166,8 @@ if(x == 0)
 \end{lstlisting}
 {\footnotesize{We assume $x$ to be initialized at 0.}}
 
-In this case we have two pairs of events and constraints:
+
+In this case we have two pairs of events and simplified constraints:
 \begin{itemize}
 \item the case where $x = 0$ :\begin{lstlisting}
 Events
@@ -188,7 +193,7 @@ S2:=S1==0
 \end{lstlisting}
 \end{minipage}
 \end{itemize}
-{\footnotesize{Some liberties were taken with the shape of the constraints compared to the actual constraints in herd. This was done for ease of understanding.}}
+
 
 In both cases the only write to $x$ is $a: Write(x, 0)$. Therefore $b$ can only read from this write and $S1$ resolves to 0. In the first case this is fine, however in the second one this causes a contradiction :
 \begin{lstlisting}
@@ -196,19 +201,20 @@ S2:=false
 S2:=0==0
 \end{lstlisting}
 
-\begin{wrapfigure}{r}{4.5cm}
-\includegraphics[width=4.5cm]{screen}
-\caption{{\footnotesize{A diagram generated from the only possible execution of the previous example}}}
-\end{wrapfigure}
 
- For each such pair of executions and constraints, herd then generates every possible choice of $\mo$ and $\rf$ then checks if they are accepted by the model from the .cat file, if they aren't, they are discarded, if they are accepted they are added to the result. Once all possibilities have been checked, herd provides the user with a list of possible final states in his .cat model, as well as the amount of executions that passed and failed the litmus test and can display the diagrams of the executions consistent with the model.
 
+ For each such pair of executions and constraints, herd then generates every possible choice of $\mo$ and $\rf$ then checks if they are accepted by the model from the .cat file, if they aren't, they are discarded, if they are accepted they are added to the result. Once all possibilities have been checked, herd provides the user with a list of possible final states. Additionally, the amount of executions that passed and failed the litmus test is printed and herd can display the diagrams of the executions consistent with the model.
 
 %SHOW DIAGRAM
 
 %\section{solution (partielle) proposée, mise en perspective avec l'etat de l'art}
 
-Generating all possible orders is not particularly efficient, on top of this, herd only performs one optimisation : the user can specify a filter on the results which will discard executions before checking them against the .cat model. Because of this .cat is only really useable on fairly small litmus tests and cannot be used to verify real world applications. Traditionally the complexity of model checking for memory models comes from the fact that it is necessary to compute and store a large set of executions which costs a lot of memory or generate them on the fly which incurs the risk of generating the same executions several times. However Michalis Kokologiannakis, Ori Lahav, Konstantinos Sagonas, and Viktor Vafeiadis recently came up with a stateless algorithm for rc11 model checking. This algorithm guarantees that it won't check two equivalent executions up to reordering of independant transitions, as long as the program to check does not feature any RMW operations. Even if the program features RMW operations, the performance of the algorithm is still quite good. I was tasked with implementing this algorithm in herd as a way to expand its possible uses.
+Generating all possible orders is not particularly efficient, on top of this, herd only performs one optimisation : the user can specify a filter on the results which will discard executions before checking them against the .cat model. Because of this .cat is only really useable on fairly small litmus tests and cannot be used to verify real world applications. Traditionally the complexity of model checking for memory models comes from the fact \begin{wrapfigure}[17]{r}{4.5cm}
+\includegraphics[width=4.5cm]{screen}
+\caption{{\footnotesize{A diagram generated from the only possible execution of the previous example}}}
+\end{wrapfigure} that it is necessary to compute and store a large set of executions which costs a lot of memory or generate them on the fly which incurs the risk of generating the same executions several times. However Michalis Kokologiannakis, Ori Lahav, Konstantinos Sagonas, and Viktor Vafeiadis recently came up with a stateless algorithm\cite{stateless} for rc11 model checking. This algorithm guarantees that it won't check two equivalent executions up to reordering of independant transitions, as long as the program to check does not feature any RMW operations. Even if the program features RMW operations, the performance of the algorithm is still quite good. I was tasked with implementing this algorithm in herd as a way to expand its possible uses.
+
+\vspace{2cm}
 
 \subsection{How the stateless algorithm works}
 
@@ -252,5 +258,20 @@ I have access to my cat implementation of RC11 and my implementation of the stat
 \section{SMT solvers for memory model checking}
 
 We recently had a talk with Hernan Ponce de Leon who did some work on using the advances made in the field of smt solvers to perform memory model checking, it would be of interest to enrich herd with this algorithm as well and this would be a possible continuation once the stateless algorithm works and has been optimized.
+
+\begin{thebibliography}{9}
+
+\bibitem{rc11}
+	Ori Lahav, Viktor Vafeiafis, Jeehoon Kang, Chung-kil Hur, Derek Dreyer
+	Repairing sequential consistency in C/C++11
+	Proceedings of the 38$^{th}$ ACM SIGPLAN Conference on Programming Language Design and Implementation
+	June 18-23, 2017, Barcelona, Spain
+
+\bibitem{stateless}
+	Michalis Kokologiannakis, Ori Lahav, Konstantinos Sagonas, Viktor Vafeiadis
+	Effective stateless model checking for C/C++ concurrency
+	Proceedings of the ACM on Programming Languages, Colume 2 Issue POPL,
+	January 2018
+\end{thebibliography}
 
 \end{document}

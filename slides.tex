@@ -1,4 +1,4 @@
-\documentclass[dvipsnames,svgnames,beamer]{beamer}
+ \documentclass[dvipsnames,svgnames,beamer]{beamer}
 
 \usetheme{Boadilla}
 %\usecolortheme{seahorse}
@@ -8,6 +8,19 @@
 \usepackage{cancel}
 
 \usepackage{lib}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\tikzset{%
+  >={Latex[width=2mm,length=2mm]},
+  % Specifications for style of nodes:
+            base/.style = {rectangle, rounded corners, draw=black,
+                           minimum width=4cm, minimum height=1cm,
+                           text centered},
+         solid/.style = {base, minimum width=2.5cm, fill=cyan!10,
+                           font=\ttfamily},
+         invisible/.style = {},
+}
+\usetikzlibrary{positioning}
 
 \setbeamercovered{invisible}
 
@@ -106,17 +119,75 @@
 \end{frame}
 
 \begin{frame}{Herd}
+	\begin{figure}
+	\centering
+	\begin{tikzpicture}[every node/.style={fill=white, font=\sffamily}, node distance=1.5cm, align=center]
 
+	\node (start) [invisible] {test};
+	\node (parser) [solid, right = 1cm of start] {Parser};
+	\node (sem) [below = of parser, solid] {Semantics};
+	\node (choice) [below = of sem, solid] {Choice of $\rf$ and $\mo$};
+	\node (solver) [below right = 0.5cm and 3 of parser, solid] {Solver};
+	\node (interp) [below = of solver, solid] {CAT interpreter};
+	\node (end) [invisible, below right = 0.4cm and -0.2cm of interp] {Outcomes};
+	\node (model) [invisible, below of = interp] {CAT file};
 	
-	\begin{itemize}
+	\draw[->] (start) -- (parser);
+	\draw[->] (parser) -- node {AST} (sem);
+	\draw[->] (sem) -- node {Events and constraints} (choice);
+	\draw[->] (choice) -| ++(2.7,1) |- node[text width=2cm, minimum size = 0.1cm, yshift=-1.4cm] {Events, constaints, $\mo$ and $\rf$} (solver);
+	\draw[->] (solver) -- node {Events} (interp);
+	\draw[->] (interp) -- (end);
+	\draw[->] (model) -- (interp);
 	
-	\item .cat file into a check
-	\item litmus test into executions + constraints
-	\item compute every combination of $\rf$ and $\po$ for each execution
-	\item keep only the ones consistent with the model
-	\item print the results to the user
+	\end{tikzpicture}
+	\end{figure}
+
+\end{frame}
+
+\begin{frame}
+
+	Generates every combination of $\rf$ and $\po$, this is computationally expensive
 	
-	\end{itemize}
+	Dealing with large sets of executions is a common problem for model checkers
+	
+	Solution : a stateless algorithm that avoids this
+
+\end{frame}
+
+\begin{frame}{The stateless algorithm}
+
+	\begin{figure}
+	\centering
+	
+	\begin{tikzpicture}[every node/.style={fill=white, font=\sffamily}, node distance=1.5cm, align=center, minimum width = 0]
+	
+	\node (cpe) [solid, text width = 4cm]{Consistent Partial Execution};
+	\node (add) [solid, below = 0.7cm of cpe, text width = 1.5cm, minimum width = 0] {Add next event};
+	\node (read) [solid, right = 2cm of add, text width = 1.5cm, minimum width = 0] {Visit read};
+	\node (write) [solid, below right = 2cm and 5cm of add, text width = 1.5cm, minimum width = 0] {Visit write};
+	\node (revisit) [solid, right = 3.7cm of cpe, text width = 1.5cm, minimum width = 0] {Revisit reads};
+	\node (done) [solid, below = of add, text width = 3cm] {Check $\psc$ and data races};
+	\node (in) [invisible, above left = 0.5cm and -0.7cm of cpe] {Initial writes};
+	\node (accept) [invisible, below left = 0.2cm and -1.4cm of done] {Accept execution};
+	\node (reject) [invisible, below right = 0.2cm and -1cm of done] {Reject execution};
+	
+	
+	\draw[->] (cpe) -- (add);
+	\draw[->] (add) -- node {read} (read);
+	\draw[->] (add) -- node {write} (write);
+	\draw[->] (add) -- node {No more events to add} (done);
+	\draw[->] (add) -| ++(-3cm,0) |- node[yshift=-1cm] {fence} (cpe);
+	\draw[->] (read) |- node[text width = 2cm] {For every possible $\rf$} (cpe);
+	\draw[->] (write) -- node {For every possible $\mo$} (revisit);
+	\draw[->] (revisit) |- ++(0,1cm) -| node[xshift = 3cm] {For every subset of revisit} (cpe);
+	\draw[->] (in) -- (cpe);
+	\draw[->] (done) -- (accept);
+	\draw[->] (done) -- (reject);
+	
+	\end{tikzpicture}	
+	
+	\end{figure}	 
 
 \end{frame}
 
