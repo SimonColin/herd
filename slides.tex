@@ -1,4 +1,4 @@
- \documentclass[dvipsnames,svgnames,beamer]{beamer}
+\documentclass[dvipsnames,svgnames,beamer, 14pt]{beamer}
 
 \usetheme{Boadilla}
 %\usecolortheme{seahorse}
@@ -57,6 +57,16 @@
 	Instructions involve memory events : reads from and writes to the shared memory.
 	\vfill
 	We study these memory events.
+
+\end{frame}
+
+\begin{frame}{Sequential consistency}
+
+	Two properties :
+	\begin{itemize}
+	\item No local reordering : the events occur in sequence and in the same order as in the program.
+	\item Single write atomicity : all threads see the writes at the same time and in the same order.
+	\end{itemize}
 
 \end{frame}
 
@@ -119,7 +129,7 @@
 	Executions are a set of events and relations.
 	\begin{figure}[b]
 	\centering
-	\includegraphics[width=4.5cm]{exec}
+%	\includegraphics[width=4.5cm]{exec}
 	\end{figure}
 
 \end{frame}
@@ -154,6 +164,7 @@
 \begin{frame}{Herd}
 	\begin{figure}
 	\centering
+	{\fontsize{10pt}{0}
 	\begin{tikzpicture}[every node/.style={fill=white, font=\sffamily}, node distance=1.5cm, align=center]
 
 	\node (start) [invisible] {test};
@@ -173,33 +184,53 @@
 	\draw[->] (interp) -- (end);
 	\draw[->] (model) -- (interp);
 	
-	\end{tikzpicture}
+	\end{tikzpicture}}
 	\end{figure}
 
 \end{frame}
 
-\begin{frame}
+\begin{frame}{Herd}
 
+	\vfill
 	Generates every combination of $\rf$ and $\mo$, this is computationally expensive.
-	
+	\vfill
 	Dealing with large sets of executions is a common problem for model checkers.
-	
+	\vfill
+	\vfill
 	Solution : a stateless algorithm that avoids this.
 
 \end{frame}
 
 \begin{frame}{The stateless algorithm}
 
+	All RC11 properties but SC are monotonous.
+	\vfill
+	Work recursively :
+	\begin{itemize}
+	\item start with a consistent partial execution.
+	
+	\item add an event 
+	
+	\item generate all possible consistent partial executions.
+	
+	\item call the algorithm recursively on every generated execution
+	\end{itemize}
+	\vfill
+
+\end{frame}
+
+\begin{frame}{How the stateless algorithm works}
+
 	\begin{figure}
 	\centering
-	
+	{\fontsize{10pt}{0}
 	\begin{tikzpicture}[every node/.style={fill=white, font=\sffamily}, node distance=1.5cm, align=center, minimum width = 0]
 	
 	\node (cpe) [solid, text width = 4cm]{Consistent Partial Execution};
 	\node (add) [solid, below = 0.7cm of cpe, text width = 1.5cm, minimum width = 0] {Add next event};
 	\node (read) [solid, right = 2cm of add, text width = 1.5cm, minimum width = 0] {Visit read};
 	\node (write) [solid, below right = 2cm and 5cm of add, text width = 1.5cm, minimum width = 0] {Visit write};
-	\node (revisit) [solid, right = 3.7cm of cpe, text width = 1.5cm, minimum width = 0] {Revisit reads};
+	\node (revisit) [solid, right = 3.75cm of cpe, text width = 1.5cm, minimum width = 0] {Revisit reads};
 	\node (done) [solid, below = of add, text width = 3cm] {Check $\psc$ and data races};
 	\node (in) [invisible, above left = 0.5cm and -0.7cm of cpe] {Initial writes};
 	\node (accept) [invisible, below left = 0.2cm and -1.4cm of done] {Accept execution};
@@ -218,7 +249,7 @@
 	\draw[->] (done) -- (accept);
 	\draw[->] (done) -- (reject);
 	
-	\end{tikzpicture}	
+	\end{tikzpicture}}
 	
 	\end{figure}	 
 
@@ -226,11 +257,15 @@
 
 \begin{frame}{Differences between the reference and my implementation}
 
+	Herd generates a set of events and constraints per possible path.
 	
+	This means that some partial executions get computed more than once.
+	\vfill
+	This also means that some parts of the reference algorithm aren't relevant to herd.
 
 \end{frame}
 
-\begin{frame}{My work}
+\begin{frame}{Work done}
 
 	So far, I have :
 	\begin{itemize}
