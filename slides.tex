@@ -1,4 +1,4 @@
-\documentclass[dvipsnames,svgnames,beamer, 14pt]{beamer}
+\documentclass[dvipsnames,svgnames,beamer, 12pt]{beamer}
 
 \usetheme{Boadilla}
 %\usecolortheme{seahorse}
@@ -28,7 +28,7 @@
 
 \setbeamertemplate{footline}{\hfill\insertframenumber\hfill\vspace{3mm}}
 
-\title{Expanding the herd Memory model checker}
+\title{Expanding the herd Memory model simulator}
 
 \author{Simon Colin}
 
@@ -42,21 +42,40 @@
 
 \begin{frame}{Weak memory models}
 
+ 	\vfill
 	IBM Power and ARM mutliprocessors have highly relaxed memory models.
 	\vfill
 	Relaxed memory models mean unexpected behaviors appear on concurrent programs.
 	\vfill
-	Interested in what behaviors are allowed.
+%	Interested in what behaviors are allowed.
 	
 \end{frame}
 
-\begin{frame}{Memory events}
+\begin{frame}[fragile]{Memory events}
 
 	Programs are made of instructions.
 	\vfill %%%EXAMPLES
 	Instructions involve memory events : reads from and writes to the shared memory.
 	\vfill
-	We study these memory events.
+	\begin{figure}
+	\centering
+	\begin{tabular}{p{4cm} p{4cm}}
+	Instructions & Events \\
+	\begin{verbatim}
+	x = 1;
+	a = x;
+	y++;
+	\end{verbatim} &
+	\begin{verbatim}
+	Store(x, 1)
+	Read(x)
+	Read(y, s0)
+	Store(y, s0 + 1)
+	\end{verbatim} \\
+	\end{tabular}
+	\end{figure}
+	{\footnotesize{$x$ and $y$ are shared variables, $a$ is a local variable}}
+	\vfill
 
 \end{frame}
 
@@ -64,7 +83,7 @@
 
 	Two properties :
 	\begin{itemize}
-	\item No local reordering : the events occur in sequence and in the same order as in the program.
+	\item No local reordering : the events occur in the same order as in the program.
 	\item Single write atomicity : all threads see the writes at the same time and in the same order.
 	\end{itemize}
 
@@ -74,7 +93,7 @@
 
 	\vfill
 	\vfill
-	Weaker memory models allow more behaviors :\begin{itemize}
+	Modern memory models allow more behaviors :\begin{itemize}
 	\item out of order execution
 	\item speculative execution
 	\item writes don't become visible to every thread at the same time
@@ -85,6 +104,7 @@
 
 \end{frame}
 
+\iffalse
 \begin{frame}{Restoring ordering}
 
 	Fences : instructions that ensure events before the fence occur before those after the fence.
@@ -93,7 +113,7 @@
 	\vfill
 	In such a situation processors will ensure B occurs before A.
 
-\end{frame}
+\end{frame}\fi
 
 \begin{frame}[fragile]{litmus tests}
 
@@ -124,31 +144,37 @@
 
 \end{frame}
 
-\begin{frame}
+\begin{frame}{Executions}
 
 	Executions are a set of events and relations.
 	\begin{figure}[b]
 	\centering
-%	\includegraphics[width=4.5cm]{exec}
+	\includegraphics[width=4.5cm]{exec}
 	\end{figure}
 
 \end{frame}
 
 \begin{frame}{RC11 : events}
 
-	\begin{itemize}
-	\item fences
-	\item non atomic memory events
-	\item atomic memory events annotated with a memory order
+	\vfill
+	fences
+	\vfill
+	non atomic memory events
+	\vfill
+	atomic memory events annotated with a memory order : \begin{itemize}
+	\item Relaxed
+	\item Acquire
+	\item Release
+	\item Sequentially consistent
 	\end{itemize}
 	\vfill
-	data race: when two events that aren't both atomic or both reads can access the same location at the same time.
-	\vfill
-	Data races cause unspecified behaviour.
+%	data race: when two events that aren't both atomic or both reads can access the same location at the same time.
+%	\vfill
+%	Data races cause unspecified behaviour.
 
 \end{frame}
 
-\begin{frame}{RC11 : properties}
+\begin{frame}{RC11}
 
 	\vfill
 	\begin{itemize}
@@ -192,12 +218,24 @@
 \begin{frame}{Herd}
 
 	\vfill
-	Generates every combination of $\rf$ and $\mo$, this is computationally expensive.
+	Generates every combination of $\rf$ and $\mo$, this is expensive.
 	\vfill
 	Dealing with large sets of executions is a common problem for model checkers.
 	\vfill
 	\vfill
-	Solution : a stateless algorithm that avoids this.
+	Solution : a stateless algorithm that doesn't record visited executions.
+
+\end{frame}
+
+\begin{frame}{My project}
+
+	Implement RC11 in CAT.  
+	\vfill
+	Implement the RC11 check directly into Herd.
+	\vfill
+	Implement the stateless algorithm in Herd.
+%	\vfill
+%	Should time allow it, I will try implementing smt based rc11 model checking techniques as well.
 
 \end{frame}
 
@@ -211,11 +249,8 @@
 	
 	\item add an event 
 	
-	\item generate all possible consistent partial executions.
-	
-	\item call the algorithm recursively on every generated execution
+	\item call the algorithm recursively on evey possible consistent partial execution (choice of $\mo$ or $\rf$).
 	\end{itemize}
-	\vfill
 
 \end{frame}
 
@@ -255,27 +290,14 @@
 
 \end{frame}
 
-\begin{frame}{Differences between the reference and my implementation}
+\iffalse \begin{frame}{Differences between the reference and my implementation}
 
 	Herd generates a set of events and constraints per possible path.
 	
-	This means that some partial executions get computed more than once.
+	Some partial executions get computed more than once.
 	\vfill
-	This also means that some parts of the reference algorithm aren't relevant to herd.
+	Some parts of the reference algorithm aren't relevant to herd.
 
-\end{frame}
-
-\begin{frame}{Work done}
-
-	So far, I have :
-	\begin{itemize}
-		\item implemented RC11 in CAT.
-		\item implemented the RC11 check directly into herd.
-		\item started but not quite finished implementing the stateless algorithm in herd.
-	\end{itemize}
-	\vfill
-	Should time allow it, I will try implementing smt based rc11 model checking techniques as well.
-
-\end{frame}
+\end{frame}\fi
 
 \end{document}
