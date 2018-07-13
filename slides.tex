@@ -21,6 +21,8 @@
          invisible/.style = {},
 }
 \usetikzlibrary{positioning}
+\usepackage{alltt}
+
 
 \setbeamercovered{invisible}
 
@@ -28,7 +30,7 @@
 
 \setbeamertemplate{footline}{\hfill\insertframenumber\hfill\vspace{3mm}}
 
-\title{Expanding the herd Memory model simulator}
+\title{Extending the herd Memory model simulator}
 
 \author{Simon Colin}
 
@@ -40,22 +42,28 @@
 	\titlepage
 \end{frame}
 
-% passer par exemple : SB
-% enelver slides evenements
 % passer regles rc11 en cat
 % expliquer no thin air
-% pseudocode pour herd et stateless
 % conclusion
 
-\begin{frame}{Weak memory models}
+\begin{frame}[fragile]{Memory models}
 
- 	\vfill
-	IBM Power and ARM mutliprocessors have highly relaxed memory models.
+	\begin{figure}
+	\centering
+	\begin{tabular}{p{4cm} || p{4cm}}
+	Thread 0 & Thread 1 \\
+	\hline \\
+	x $\leftarrow$ 1 & y $\leftarrow$ 1 \\
+	r0 $\leftarrow$ y & r1 $\leftarrow$ x 
+	\end{tabular}
+	\end{figure}
 	\vfill
-	Relaxed memory models mean unexpected behaviors appear on concurrent programs.
-	\vfill
-%	Interested in what behaviors are allowed.
+	Can we have $r0 = 0$ and $r1 = 0$?
 	
+	We expect the instructions to be executed in order, so this shouldn't be possible.
+	
+	On modern processors, this behaviour can happen.
+
 \end{frame}
 
 \begin{frame}[fragile]{Memory events}
@@ -71,27 +79,29 @@
 	\begin{verbatim}
 	x = 1;
 	a = x;
+	fence;
 	y++;
 	\end{verbatim} &
 	\begin{verbatim}
 	Store(x, 1)
 	Read(x)
+	Fence
 	Read(y, s0)
 	Store(y, s0 + 1)
 	\end{verbatim} \\
 	\end{tabular}
 	\end{figure}
-	{\footnotesize{$x$ and $y$ are shared variables, $a$ is a local variable}}
+	$x$ and $y$ are shared variables, $a$ is a local variable
 	\vfill
 
 \end{frame}
 
-\begin{frame}{Sequential consistency}
+\begin{frame}{A simple model : sequential consistency}
 
 	Two properties :
 	\begin{itemize}
 	\item No local reordering : the events occur in the same order as in the program.
-	\item Single write atomicity : all threads see the writes at the same time and in the same order.
+	\item Instantaneous memory : when a thread writes to memory all threads see the value instantly.
 	\end{itemize}
 
 \end{frame}
@@ -99,15 +109,16 @@
 \begin{frame}{Weaker memory models}
 
 	\vfill
+	Modern memory models allow more behaviors than sequential consistency.
 	\vfill
-	Modern memory models allow more behaviors :\begin{itemize}
+	Such behaviours result from :\begin{itemize}
 	\item out of order execution
 	\item speculative execution
 	\item writes don't become visible to every thread at the same time
 	\end{itemize}
 	\vfill
-	Fortunately, there are means to restore ordering.
-	\vfill
+%	Fortunately, there are means to restore ordering.
+%	\vfill
 
 \end{frame}
 
@@ -120,7 +131,7 @@
 	\vfill
 	In such a situation processors will ensure B occurs before A.
 
-\end{frame}\fi
+\end{frame}
 
 \begin{frame}[fragile]{litmus tests}
 
@@ -149,18 +160,35 @@
 	\vfill
 	\vfill
 
-\end{frame}
+\end{frame}\fi
 
 \begin{frame}{Executions}
 
 	Executions are a set of events and relations.
+	\begin{figure}
+	\centering
+	\begin{columns}
+	\begin{column}{5cm}
 	\begin{figure}[b]
 	\centering
-	\includegraphics[width=4.5cm]{exec}
+	\raisebox{-\totalheight}{\includegraphics[width=4.1cm]{exec}}
+	\end{figure}
+	\end{column}
+	\begin{column}{5cm}
+	\begin{itemize}
+	\item program order $\po$
+	\item memory order $\mo$
+	\item read from $\rf$
+	\item many more relations ...
+	\end{itemize}
+	\end{column}
+	\end{columns}
+	
 	\end{figure}
 
 \end{frame}
 
+\iffalse
 \begin{frame}{RC11 : events}
 
 	\vfill
@@ -179,18 +207,35 @@
 %	\vfill
 %	Data races cause unspecified behaviour.
 
-\end{frame}
+\end{frame}\fi
 
-\begin{frame}{RC11}
+\begin{frame}[fragile]{RC11}
 
 	\vfill
+	An RC11\footnote{Repairing sequential consistency in C/C++11, Proceedings of the 38$^{th}$ ACM SIGPLAN Conference} consistent execution satisfies :
 	\begin{itemize}
-	\item $\hb ; \eco ^?$ is irreflexive. \hfill (coherence)
-	\item $\rmw \cap (\rb ; \mo) = \emptyset$. \hfill (atomicity)
-	\item $\po \cup \rf$ is acyclic. \hfill (no-thin-air)
-	\item $\psc$ is acyclic. \hfill (sequential-consistency)
+	\item \verb$irreflexive (hb; eco?)$ \hfill (coherence)
+	\item \verb$empty (rmw & (rb; mo))$. \hfill (atomicity)
+	\item \verb$acyclic (po | rf)$ \hfill (no-thin-air)
+	\item \verb$acyclic psc$ \hfill (sequential-consistency)
 	\end{itemize}
 	\vfill
+	
+
+\end{frame}
+
+\begin{frame}[fragile]{no-thin-air}
+
+	\verb!acyclic (po | rf)!
+	\vfill
+	\begin{itemize}
+	\item If we read from a write, the write has to have taken place first.
+	\item If a write depends on a read, the read has to have taken place first.
+	\end{itemize}
+	
+	$\dep;\rf$ causality loops are possible.
+	
+	Since $\dep \subseteq \po$ we forbid $\dep;\rf$ loops by simply banning $\po;\rf$ loops.
 
 \end{frame}
 
@@ -201,23 +246,47 @@
 	\begin{tikzpicture}[every node/.style={fill=white, font=\sffamily}, node distance=1.5cm, align=center]
 
 	\node (start) [invisible] {test};
-	\node (parser) [solid, right = 1cm of start] {Parser};
+	\node (parser) [solid, right = 0.5cm of start] {Parser};
 	\node (sem) [below = of parser, solid] {Semantics};
 	\node (choice) [below = of sem, solid] {Choice of $\rf$ and $\mo$};
 	\node (solver) [below right = 0.5cm and 3 of parser, solid] {Solver};
 	\node (interp) [below = of solver, solid] {CAT interpreter};
 	\node (end) [invisible, below right = 0.4cm and -0.2cm of interp] {Outcomes};
 	\node (model) [invisible, below of = interp] {CAT file};
+	\node (reject) [invisible, below right = 0.17cm and 0.25cm of solver, text width = 1.75cm] {discard invalid executions};
 	
 	\draw[->] (start) -- (parser);
 	\draw[->] (parser) -- node {AST} (sem);
-	\draw[->] (sem) -- node {Events and constraints} (choice);
-	\draw[->] (choice) -| ++(2.7,1) |- node[text width=2cm, minimum size = 0.1cm, yshift=-1.4cm] {Events, constaints, $\mo$ and $\rf$} (solver);
-	\draw[->] (solver) -- node {Events} (interp);
+	\draw[->] (sem) -- node[text width = 2.5cm] {Events, $\po$ and constraints} (choice);
+	\draw[->] (choice) -| ++(2.7,1) |- node[text width= 2cm, minimum size = 0.1cm, yshift=-1.4cm] {Events, $\po$, $\mo$, $\rf$ and constaints} (solver);
+	\draw[->] (solver) -- node[text width = 2cm] {Events, $\po$, $\mo$ and $\rf$} (interp);
 	\draw[->] (interp) -- (end);
 	\draw[->] (model) -- (interp);
+	\draw[->] (solver) -- (reject);
+	\draw[->] (interp) -- (reject);
 	
 	\end{tikzpicture}}
+	\end{figure}
+
+\end{frame}
+
+\begin{frame}[fragile]{Herd}
+
+	\begin{figure}
+	\centering
+	\begin{lstlisting}
+herd(execution $E$)
+{
+  forall $\mo$ on $E$
+  {
+    forall $\rf$ on execution $E$
+    {
+      if consistent(CAT model, $E$, $\mo$, $\rf$)
+      then add(outcomes, $E$, $\mo$, $\rf$)
+    }
+  }
+
+	\end{lstlisting}
 	\end{figure}
 
 \end{frame}
@@ -229,8 +298,9 @@
 	\vfill
 	Dealing with large sets of executions is a common problem for model checkers.
 	\vfill
-	\vfill
-	Solution : a stateless algorithm that doesn't record visited executions.
+	\begin{center}
+	Solution : a stateless incremental algorithm\footnote{Effective stateless model checking for C/C++ concurrency, Proceedings of the ACM on Programming Languages, Colume 2 Issue POPL} that avoids building most inconsistent executions.
+	\end{center}
 
 \end{frame}
 
@@ -245,11 +315,12 @@
 %	Should time allow it, I will try implementing smt based rc11 model checking techniques as well.
 
 \end{frame}
-
+\iffalse
 \begin{frame}{The stateless algorithm}
 
 	All RC11 properties but SC are monotonous.
 	\vfill
+	
 	Work recursively :
 	\begin{itemize}
 	\item start with a consistent partial execution.
@@ -258,6 +329,32 @@
 	
 	\item call the algorithm recursively on evey possible consistent partial execution (choice of $\mo$ or $\rf$).
 	\end{itemize}
+\end{frame}\fi
+
+\begin{frame}[fragile]{The stateless algorithm}
+
+\begin{figure}
+\centering
+\begin{small}
+\begin{lstlisting}
+visit(execution $E$) {
+  if has_events_to_add($E$)
+  then
+  {
+    $e$ = next_event($E$)
+    $execs$ = possible_extensions($E$, $e$)
+    for $ex$ in $execs$
+    {
+      if rc11_consistent($ex$)
+      then visit($ex$)
+    }
+  } else {
+    if acyclic($E$.psc)
+    then add(outcomes, $E$)
+  }}
+\end{lstlisting}
+\end{small}
+\end{figure}
 
 \end{frame}
 
@@ -273,7 +370,7 @@
 	\node (read) [solid, right = 2cm of add, text width = 1.5cm, minimum width = 0] {Visit read};
 	\node (write) [solid, below right = 2cm and 5cm of add, text width = 1.5cm, minimum width = 0] {Visit write};
 	\node (revisit) [solid, right = 3.75cm of cpe, text width = 1.5cm, minimum width = 0] {Revisit reads};
-	\node (done) [solid, below = of add, text width = 3cm] {Check $\psc$ and data races};
+	\node (done) [solid, below = of add, text width = 3cm] {Check $\psc$};
 	\node (in) [invisible, above left = 0.5cm and -0.7cm of cpe] {Initial writes};
 	\node (accept) [invisible, below left = 0.2cm and -1.4cm of done] {Accept execution};
 	\node (reject) [invisible, below right = 0.2cm and -1cm of done] {Reject execution};
@@ -284,8 +381,8 @@
 	\draw[->] (add) -- node {write} (write);
 	\draw[->] (add) -- node {No more events to add} (done);
 	\draw[->] (add) -| ++(-3cm,0) |- node[yshift=-1cm] {fence} (cpe);
-	\draw[->] (read) |- node[text width = 2cm] {For every possible $\rf$} (cpe);
-	\draw[->] (write) -- node {For every possible $\mo$} (revisit);
+	\draw[->] (read) |- node[text width = 2cm] {For every possible $\rf$-extension} (cpe);
+	\draw[->] (write) -- node [text width = 2cm]{For every possible $\mo$-extension} (revisit);
 	\draw[->] (revisit) |- ++(0,1cm) -| node[xshift = 3cm] {For every subset of revisit} (cpe);
 	\draw[->] (in) -- (cpe);
 	\draw[->] (done) -- (accept);
@@ -306,5 +403,26 @@
 	Some parts of the reference algorithm aren't relevant to herd.
 
 \end{frame}\fi
+
+\begin{frame}{Conclusion}
+
+	My algorithm works for CAS-free programs.
+	
+	It is faster than Herd for larger tests, but slower for shorter ones.
+%	This is likely due to the smaller number of executions to discard on smaller tests.
+	\vfill
+	The treatment of CAS is not finished yet, this is difficult because of differences in the handling of semantics between Herd and the reference.
+\end{frame}
+
+\begin{frame}{Further work}
+
+	\begin{itemize}
+	\item finish the implementation
+	\item test the incremental algorithm against the RC11 CAT file
+	\item optimize the performance
+	\item work on SMT-based memory model checking
+	\end{itemize}
+
+\end{frame}
 
 \end{document}
