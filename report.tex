@@ -282,7 +282,7 @@ Another interesting aspect of the incremental algorithm is that the order in whi
 
 \subsection{Incremental coherence}
 
-One of the properties of RC11 that is ensured by the incremental algorithm is coherence. This is interesting because coherence isn't exclusive to RC11 but is in fact used by other memory models. Once the incremental algorithm had been implemented in herd, I was tasked with writing an incremental algorithm that would ensure coherence. This algorithm would then take check the coherent executions against a cat model.
+One of the properties of RC11 that is ensured by the incremental algorithm is coherence. This is interesting because coherence isn't exclusive to RC11 but is in fact used by other memory models. Once the incremental algorithm had been implemented in herd, I was tasked with writing an incremental algorithm that would ensure coherence. This algorithm would then take check the coherent executions against a cat model. Unfortunately, the incremental coherence generation algorithm that I derived from the incremental RC11 algorithm was actually slower than 
 
 \begin{thebibliography}{9}
 
