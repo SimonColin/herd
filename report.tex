@@ -259,6 +259,31 @@ I have access to my cat implementation of RC11 and my implementation of the stat
 
 We recently had a talk with Hernan Ponce de Leon who did some work on using the advances made in the field of smt solvers to perform memory model checking, it would be of interest to enrich herd with this algorithm as well and this would be a possible continuation once the stateless algorithm works and has been optimized.
 
+\section{Work done during the remainder of the internship}
+
+\subsection{performance}
+
+The incremental algorithm was eventually made to agree with the cat model. The previously noted inferior performance of the incremental algorithm was due to the use of short litmus tests. On such programs the overall number of possible executions is quite low, this means that regardless of memory model there are only a small number of invalid executions to discard. Under such circumstances, there is little to gain from the incremental algorithm pruning executions early, and the added work it does makes it less efficient. In short, herds performance depends on the number of possible executions which is a function of the amount of reads and writes as well as branches, the incremental algorithm on the other hand depends on the amount of executions that are allowed by the RC11 model.
+
+For programs without any kind of branching executions (ifs and CAS), the relative performance depends on the amount of allowed executions relative to disallowed ones. The incremental algorithm is faster if it spends less times generating executions than herd spends checking all possible executions.
+
+For programs that feature branching executions, the performance of the incremental algorithm was initally much worse than that of herd. This is because herd has to consider every combination of branches. The incremental algorithm then builds all possible executions for every choice of branches. This has two problems :
+\begin{itemize}
+\item The code leading up to a given branching point in the program is the same regardless of branch taken, this means that herd will generate the same execution prefixes up to this branching point.
+\item The incremental algorithm computes the values read only after having generated a complete execution. This means that it will generate a number of executions that will be discarded.
+\end{itemize}
+This means that for a program with $n$ branches my implementation of the incremental algorithm does about $2^{n}$ with n the amount of branching instructions more work than the reference algorithm.
+
+Fortunately, this could be improved by resolving the constraints on execution prefixes, that is to say computing the values read by reads. Constraints also store the values that certain reads have to read, which allows us to discard executions that don't respect this. Unfortunately, we cannot do this for all the reads since some might be revisited. To solve this I use a safe set of reads that stores the reads that will no longer be revisited. Each time this set is extended I check that the constraints are respected by the reads from the safe set.
+
+This drastically improved the performance of my implementation on programs with lots of branching. However, herd is still faster on programs with lots of branching. This is likely due to the fact that the incremental constraint solving only checks the safe set, as well as the fact that it doesn't deal with the problem that the algorithm will generate identical execution prefixes multiple times.
+
+Another interesting aspect of the incremental algorithm is that the order in which instructions are added can impact performance. However it isn't clear if there is a way that is faster.
+
+\subsection{Incremental coherence}
+
+One of the properties of RC11 that is ensured by the incremental algorithm is coherence. This is interesting because coherence isn't exclusive to RC11 but is in fact used by other memory models. Once the incremental algorithm had been implemented in herd, I was tasked with writing an incremental algorithm that would ensure coherence. This algorithm would then take check the coherent executions against a cat model.
+
 \begin{thebibliography}{9}
 
 \bibitem{rc11}
