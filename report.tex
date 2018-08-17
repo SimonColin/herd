@@ -263,7 +263,7 @@ We recently had a talk with Hernan Ponce de Leon who did some work on using the 
 
 \subsection{performance}
 
-The incremental algorithm was eventually made to agree with the cat model. The previously noted inferior performance of the incremental algorithm was due to the use of short litmus tests. On such programs the overall number of possible executions is quite low, this means that regardless of memory model there are only a small number of invalid executions to discard. Under such circumstances, there is little to gain from the incremental algorithm pruning executions early, and the added work it does makes it less efficient. In short, herds performance depends on the number of possible executions which is a function of the amount of reads and writes as well as branches, the incremental algorithm on the other hand depends on the amount of executions that are allowed by the RC11 model.
+The incremental algorithm was eventually made to agree with the cat model. The previously noted inferior performance of the incremental algorithm was due to the use of short litmus tests. On such programs the overall number of possible executions is quite low, this means that regardless of memory model there are only a small number of invalid executions to discard. Under such circumstances, there is little to gain from the incremental algorithm pruning executions early, and the added work it does makes it slower. In short, herds performance depends on the number of possible executions which is a function of the amount of reads and writes as well as branches, the incremental algorithm on the other hand depends on the amount of executions that are allowed by the RC11 model.
 
 For programs without any kind of branching executions (ifs and CAS), the relative performance depends on the amount of allowed executions relative to disallowed ones. The incremental algorithm is faster if it spends less times generating executions than herd spends checking all possible executions.
 
@@ -272,7 +272,7 @@ For programs that feature branching executions, the performance of the increment
 \item The code leading up to a given branching point in the program is the same regardless of branch taken, this means that herd will generate the same execution prefixes up to this branching point.
 \item The incremental algorithm computes the values read only after having generated a complete execution. This means that it will generate a number of executions that will be discarded.
 \end{itemize}
-This means that for a program with $n$ branches my implementation of the incremental algorithm does about $2^{n}$ with n the amount of branching instructions more work than the reference algorithm.
+This means that for a program with $n$ branches my implementation of the incremental algorithm does about $2^{n}$ more work than the reference algorithm provided the branches are of the same length.
 
 Fortunately, this could be improved by resolving the constraints on execution prefixes, that is to say computing the values read by reads. Constraints also store the values that certain reads have to read, which allows us to discard executions that don't respect this. Unfortunately, we cannot do this for all the reads since some might be revisited. To solve this I use a safe set of reads that stores the reads that will no longer be revisited. Each time this set is extended I check that the constraints are respected by the reads from the safe set.
 
@@ -282,7 +282,7 @@ Another interesting aspect of the incremental algorithm is that the order in whi
 
 \subsection{Incremental coherence}
 
-One of the properties of RC11 that is ensured by the incremental algorithm is coherence. This is interesting because coherence isn't exclusive to RC11 but is in fact used by other memory models. Once the incremental algorithm had been implemented in herd, I was tasked with writing an incremental algorithm that would ensure coherence. This algorithm would then take check the coherent executions against a cat model. Unfortunately, the incremental coherence generation algorithm that I derived from the incremental RC11 algorithm was actually slower than 
+One of the properties of RC11 that is ensured by the incremental algorithm is coherence. This is interesting because coherence isn't exclusive to RC11 but is in fact used by other memory models. Once the incremental algorithm had been implemented in herd, I was tasked with writing an incremental algorithm that would ensure coherence. This algorithm would generate coherent executions and check them against a cat model. Unfortunately, the incremental coherence generation algorithm that I derived from the incremental RC11 algorithm had similar performance issues to the incremental RC11 algorithm. This is likely due to the fact that there are more coherent executions than RC11 consistent executions for a given program, as well as the fact that the revisit set was more difficult to handle. This meant that the property of the original algorithm : that every coherent execution is only generated once was no longer ensured for coherence. Time didn't allow for an extension of the incremental coherence algorithm to allow it to then check the executions against a cat model.
 
 \begin{thebibliography}{9}
 
